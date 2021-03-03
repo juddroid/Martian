@@ -1,0 +1,156 @@
+@import '../node_modules/sass-math/math';
+
+body {
+  background: #333;
+  margin: 0;
+  padding: 0;
+  font-family: 'Space Mono', monospace;
+}
+
+.title--martian {
+  text-decoration: none;
+}
+
+.body__container {
+  height: 100vh;
+  padding-top: 30px;
+  background-image: url(https://user-images.githubusercontent.com/70361152/107884893-a01d6780-6f3a-11eb-9be0-ccd1fc73d247.jpg);
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.title__box {
+  color: #fff;
+  font-weight: 600;
+  font-size: 3em;
+  text-align: center;
+  letter-spacing: 10px;
+  padding: 25px;
+}
+
+.planet__box {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  padding: 150px 0;
+  position: relative;
+
+  .planet {
+    display: inline-block;
+    text-align: center;
+    height: 100%;
+    margin: 10px;
+    padding: 25px;
+
+    .message-box {
+      margin-top: 30px;
+      font-family: 'Space Mono', monospace;
+    }
+    .martian-button {
+      margin-top: 10px;
+      width: 100%;
+      font-family: 'Space Mono', monospace;
+    }
+  }
+
+  input:read-only {
+    background: #e5e5e5;
+  }
+
+  .mars {
+    .title {
+      margin-top: 50px;
+      text-align: center;
+    }
+
+    @mixin regular-border {
+      border: 3px solid #fff;
+    }
+
+    $marsDiameter: 567px;
+    $peiceUnits: 16;
+    $peiceAngle: 360 / $peiceUnits;
+
+    .hex-circle {
+      position: absolute;
+      width: $marsDiameter;
+      height: $marsDiameter;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      .roulette {
+        position: absolute;
+        @include regular-border();
+        border-radius: 50%;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        overflow: hidden;
+        z-index: 1;
+
+        @function tanDeg($deg) {
+          $rad: ($deg * pi()) / 180;
+          @return $marsDiameter / (1 / tan($rad));
+        }
+        @for $i from 0 through ($peiceUnits - 1) {
+          $angle: 0deg;
+
+          .peice-#{$i} {
+            $thisAngle: $angle + ($i * $peiceAngle);
+
+            position: absolute;
+            width: 0;
+            height: 0;
+            border: 0 solid transparent;
+            left: $marsDiameter / 2;
+            top: -$marsDiameter / 2;
+            border-top-width: $marsDiameter;
+            border-right-width: tanDeg($peiceAngle);
+            transform-origin: left bottom;
+            border-top-color: rgba(255, 255, 255, 0.5);
+            transform: rotate($thisAngle - 1deg);
+          }
+          .hex-code {
+            $thisAngle: $angle + ($i * $peiceAngle);
+
+            position: absolute;
+            top: -250px;
+            left: 38px;
+            color: #333;
+            font-size: 30px;
+            font-weight: 600;
+            font-family: 'Space Mono', monospace;
+            display: block;
+            transform: rotate(-$thisAngle);
+          }
+        }
+      }
+    }
+
+    .arrow-circle {
+      width: 120px;
+      height: 120px;
+      background: #be4622;
+      @include regular-border();
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transform: rotate(22.5 / 2 * 1deg);
+      position: relative;
+      z-index: 10;
+
+      svg {
+        width: 100px;
+        height: 100px;
+        fill: #fff;
+      }
+    }
+  }
+
+  .earth {
+  }
+}
