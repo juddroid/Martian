@@ -66,10 +66,14 @@ body {
     @mixin regular-border {
       border: 3px solid #fff;
     }
+    @function tanDeg($deg) {
+      $rad: ($deg * pi()) / 180;
+      @return $marsDiameter * tan($rad);
+    }
 
     $marsDiameter: 567px;
-    $peiceUnits: 16;
-    $peiceAngle: 360 / $peiceUnits;
+    $pieceUnits: 16;
+    $pieceAngle: 360 / $pieceUnits;
 
     .hex-circle {
       position: absolute;
@@ -91,15 +95,11 @@ body {
         overflow: hidden;
         z-index: 1;
 
-        @function tanDeg($deg) {
-          $rad: ($deg * pi()) / 180;
-          @return $marsDiameter / (1 / tan($rad));
-        }
-        @for $i from 0 through ($peiceUnits - 1) {
+        @for $i from 0 through ($pieceUnits - 1) {
           $angle: 0deg;
 
-          .peice-#{$i} {
-            $thisAngle: $angle + ($i * $peiceAngle);
+          .piece-#{$i} {
+            $thisAngle: $angle + ($i * $pieceAngle);
 
             position: absolute;
             width: 0;
@@ -108,18 +108,18 @@ body {
             left: $marsDiameter / 2;
             top: -$marsDiameter / 2;
             border-top-width: $marsDiameter;
-            border-right-width: tanDeg($peiceAngle);
+            border-right-width: tanDeg($pieceAngle);
             transform-origin: left bottom;
-            border-top-color: rgba(255, 255, 255, 0.5);
+            border-top-color: rgba(255, 255, 255, 0.2);
             transform: rotate($thisAngle - 1deg);
           }
           .hex-code {
-            $thisAngle: $angle + ($i * $peiceAngle);
+            $thisAngle: $angle + ($i * $pieceAngle);
 
             position: absolute;
             top: -250px;
             left: 38px;
-            color: #333;
+            color: #fff;
             font-size: 30px;
             font-weight: 600;
             font-family: 'Space Mono', monospace;
@@ -139,7 +139,7 @@ body {
       display: flex;
       justify-content: center;
       align-items: center;
-      transform: rotate(22.5 / 2 * 1deg);
+      transform: rotate($pieceAngle / 2 * 1deg);
       position: relative;
       z-index: 10;
 
