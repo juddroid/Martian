@@ -1,38 +1,21 @@
-const $earthInterpretButton = document.querySelector('#earth-interpret--button');
-const $marsInterpretButton = document.querySelector('#mars-interpret--button');
-const $earthInput = document.querySelector('#earth--input');
-const $marsInput = document.querySelector('#mars--input');
-const $earthInfo = document.querySelector('#earth--info');
-const $marsInfo = document.querySelector('#mars--info');
-const $send2earthButton = document.querySelector('#send-to-earth--button');
-const $send2marsButton = document.querySelector('#send-to-mars--button');
-const $arrow = document.querySelector('.arrow-circle');
-const $roulette = document.querySelector('.roulette');
+import {dom} from './dom'
+import {name, url} from './const'
+import {color} from './color'
 
-const MARS = 'mars';
-const EARTH = 'earth';
-
-const colorSet = {
-  blue: '#0d6efd',
-  indigo: '#6610f2',
-  purple: '#6f42c1',
-  pink: '#d63384',
-  red: '#dc3545',
-  orange: '#fd7e14',
-  yellow: '#ffc107',
-  green: '#198754',
-  teal: '#20c997',
-  cyan: '#0dcaf0',
-  gray: '#6c757d',
-  grayDark: '#343a40',
-  primary: '#0d6efd',
-  secondary: '#6c757d',
-  success: '#198754',
-  info: '#0dcaf0',
-  warning: '#ffc107',
-  danger: '#dc3545',
-  dark: '#212529',
-};
+const {MARS, EARTH} = name
+const {BASE_PATH} = url
+const {
+  $earthInterpretButton,
+  $marsInterpretButton,
+  $earthInput,
+  $marsInput,
+  $earthInfo,
+  $marsInfo,
+  $send2earthButton,
+  $send2marsButton,
+  $arrow,
+  $roulette
+} = dom
 
 $earthInterpretButton.addEventListener('click', interpretor);
 $marsInterpretButton.addEventListener('click', interpretor);
@@ -43,10 +26,10 @@ $marsInput.addEventListener('click', initInput);
 $send2marsButton.addEventListener('click', send2mars);
 $send2earthButton.addEventListener('click', send2earth);
 
-// Send to Mars 버튼을 누르면 여기에 데이터가 저장된다.
-// 이걸 서버에 저장할 수 있나...
-let hexQueue = [];
-let receiver;
+let messageQueue = [];
+let receiver = null;
+let currentPlanet = MARS;
+let status = null;
 let arrowStatus = false;
 
 function initInput(e) {
@@ -94,24 +77,29 @@ function initDom(dom) {
   if (dom.value.length > 0) dom.value = '';
 }
 
-function setHexQueue() {
+function setMessageQueue() {
+  const dom = currentPlanet === MARS ? $marsInfo : $earthInfo
   let queue = [];
-  $earthInfo.value.split('').forEach((el) => queue.push(el));
-  hexQueue.push(queue);
-  return hexQueue;
+  dom.value.split('').forEach((el) => queue.push(el));
+  messageQueue.push(queue);
+  return messageQueue;
 }
 
 function isEmpty(arr) {
   return arr.length === 0;
 }
 
-function messageReceiver() {
-  return new Promise((resolve) => {
-    resolve(hexQueue);
-  }).then((data) => {
-    if (isEmpty(data)) return;
-    moveArrow(EARTH, data);
-  });
+async function messageReceiver() {
+  return await fetch(`${BASE_PATH}/receiver`)
+    .then((res) => res.json())
+    .then(({data}) => {
+      if (!data) return
+      messageQueue.push(data)
+      moveArrow(currentPlanet)
+    })
+    .catch((err) => {
+      console.error(err)
+    });
 }
 
 function startReceiver() {
@@ -128,59 +116,86 @@ function stopReceiver() {
 startReceiver();
 
 function send2mars() {
-  setHexQueue();
-  $send2marsButton.disabled = true;
+  currentPlanet = EARTH;
   initDom($marsInfo);
+  $send2marsButton.disabled = true;
+  setMessage().then((res) => {
+    if (res.code === 200) {
+    }
+  }).catch((err) => console.error(err))
   return;
 }
 
 function send2earth() {
+  currentPlanet = MARS;
   initDom($earthInfo);
   $send2earthButton.disabled = true;
-  return moveArrow(MARS, [$marsInfo.value.split('')]);
+  setMessage().then((res) => {
+    if (res.code === 200) {
+    }
+  }).catch((err) => console.error(err))
+  return;
 }
 
-function moveArrow(planet, valueArr) {
+async function setMessage() {
+  const dom = currentPlanet === MARS ? $marsInput : $earthInput
+  const {value} = dom
+  return await fetch(`${BASE_PATH}/receiver`, {
+    method: 'POST',
+    mode: 'cors',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({data: value})
+  })
+}
+
+function moveArrow(planet) {
+
   const inputHexOnMars = (str) => ($marsInfo.value += str);
   const inputHexOnEarth = (str) => ($earthInfo.value += str);
   const delay = () => new Promise((resolve) => setTimeout(resolve, 1000));
   const hexCode = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
   let piece = 360 / hexCode.length;
 
-  let arr = Array.prototype.slice.call(valueArr[0]); // 배열복사
+  const message = messageQueue.shift()
+  const hex = str2hex(message);
+  console.log(hex)
+  const hexList = hex.split('');
 
-  hexQueue.shift();
-  console.log(hexQueue);
+  $send2earthButton.disabled = true;
+  $send2marsButton.disabled = true;
+
   (async () => {
-    for (let el of arr) {
+    for (let el of hexList) {
       arrowStatus = true;
-      await delay(); // 아.. 얘가 '기다려~' 하는 애라서 await이네...
-      // await은 promise를 기다린다. from DD
+      await delay();
+
       let idx = hexCode.indexOf(el);
       if (idx === -1) {
         spaceAnimation();
       } else {
+
         let rotateDeg = (piece * idx * 2) / 2 + 10; // 보정
         arrowAnimation(rotateDeg);
-        pieceAnamation(idx);
+        pieceAnimation(idx);
       }
 
-      // 여긴 못빼고있다.....
-      // ...아...
-      setTimeout(() => {
-        if (planet === EARTH) inputHexOnMars(el);
-        if (planet === MARS) inputHexOnEarth(el);
-      }, 1000);
+        setTimeout(() => {
+          if (planet === EARTH) inputHexOnMars(el);
+          if (planet === MARS) inputHexOnEarth(el);
+        }, 1000);
+
     }
     if (planet === EARTH) $marsInterpretButton.disabled = false;
     if (planet === MARS) $earthInterpretButton.disabled = false;
 
+    $send2earthButton.disabled = false;
+    $send2marsButton.disabled = false;
     arrowStatus = false;
   })();
 }
 
 function spaceAnimation() {
-  $arrow.style.background = `${Object.values(colorSet)[Math.floor(Math.random() * (Object.values(colorSet).length - 0) + 0)]}`;
+  $arrow.style.opacity = '50%';
   $arrow.style.transition = `1s ease-in-out`;
   setTimeout(() => {
     $arrow.removeAttribute('style');
@@ -193,9 +208,9 @@ function arrowAnimation(deg) {
   $arrow.style.transition = `1s ease-in-out`;
 }
 
-function pieceAnamation(i) {
+function pieceAnimation(i) {
   setTimeout(() => {
-    $roulette.querySelector(`.piece-${i}`).style.borderTopColor = `${Object.values(colorSet)[i]}`;
+    $roulette.querySelector(`.piece-${i}`).style.borderTopColor = `${Object.values(color)[i]}`;
     $roulette.querySelector(`.piece-${i}`).style.opacity = `50%`;
     $roulette.querySelector(`.piece-${i}`).style.transition = `1s ease-in-out`;
   }, 500);
@@ -234,27 +249,3 @@ function pieceAnamation(i) {
 // v 10. 화살표가 메세지를 가리킬때 지구의 INFO에 문자가 바로 출력된다.
 // v 11. Interpret하면 해석한다.
 
-class RaccoonPromise {
-  constructor() {
-    this.status = {
-      PENDING: 'pending',
-      FULFILLED: 'fulfilled',
-      REJECTED: 'rejected',
-    };
-  }
-  resolve() {
-    console.log('내가 해냈어!!!');
-  }
-
-  reject() {
-    console.log('미안하지만 이번엔 실패야...');
-  }
-
-  then() {
-    console.log('자! 다음은 뭐지?!');
-  }
-
-  catch() {
-    console.log('너의 실패 이유다!');
-  }
-}
